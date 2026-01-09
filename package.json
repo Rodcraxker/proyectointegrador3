@@ -24,6 +24,7 @@
     "mongoose": "^9.1.2",
     "pg": "^8.16.3",
     "react": "^19.2.3",
+    "react-confetti": "^6.4.0",
     "react-dom": "^19.2.3"
   }
 }

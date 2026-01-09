@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Scanner } from '@yudiel/react-qr-scanner';
-// Aquí importamos solo lo que vamos a usar
+// 1. IMPORTAMOS LA LIBRERÍA DE CONFETI
+import Confetti from 'react-confetti';
 import { Leaf, User, Recycle, LogOut, QrCode, MapPin, AlertTriangle, Camera, Barcode } from 'lucide-react';
 import './style.css';
 
 // --- CONFIGURACIÓN DE RED ---
-const API_URL = 'http://10.104.117.77:4000'; // Nueva IP de tu Hotspot
+// OJO: Si cambias de red, recuerda actualizar esta IP
+const API_URL = 'http://10.104.117.77:4000'; 
 
 // --- INTERFACES ---
 interface Usuario {
@@ -56,7 +58,11 @@ function App() {
   const [basureroValidado, setBasureroValidado] = useState(false);
   const [distanciaActual, setDistanciaActual] = useState<number | null>(null);
 
-  // Historial local para evitar fraudes
+  // 2. ESTADO PARA EL CONFETI
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowDimension, setWindowDimension] = useState({width: window.innerWidth, height: window.innerHeight});
+
+  // Historial local
   const [codigosUsados, setCodigosUsados] = useState<string[]>([]);
   const [fotosUsadas, setFotosUsadas] = useState<string[]>([]);
 
@@ -71,10 +77,18 @@ function App() {
   
   const [mensaje, setMensaje] = useState<MensajeEstado>({ texto: '', tipo: '' });
 
+  // Detectar tamaño de pantalla para el confeti
+  const detectSize = () => {
+    setWindowDimension({width: window.innerWidth, height: window.innerHeight});
+  }
+
   useEffect(() => {
+    window.addEventListener('resize', detectSize);
     axios.get(`${API_URL}/api/materiales`)
       .then(res => setMateriales(res.data))
       .catch(err => console.error("Error backend:", err));
+      
+    return () => window.removeEventListener('resize', detectSize);
   }, []);
 
   // --- LOGIN ---
@@ -89,7 +103,7 @@ function App() {
     }
   };
 
-  // --- 1. ESCANEO DE BASURERO ---
+  // --- ESCANEO BASURERO ---
   const handleScanBasurero = (result: any) => {
     if (result) {
       try {
@@ -126,21 +140,20 @@ function App() {
             }
           },
           (error) => {
-            // CORRECCIÓN: Aquí usamos la variable 'error' para que TS no se queje
             console.error("Error GPS:", error);
             setMensaje({ texto: 'Error de GPS. Verifica permisos.', tipo: 'error' });
             setModoEscaneoBasurero(false);
           }
         );
       } catch (error) {
-        console.error(error); // Usamos error aquí también
+        console.error(error);
         setMensaje({ texto: 'Error leyendo QR Basurero.', tipo: 'error' });
         setModoEscaneoBasurero(false);
       }
     }
   };
 
-  // --- 2. ESCANEO DE PRODUCTO ---
+  // --- ESCANEO PRODUCTO ---
   const handleScanProducto = (result: any) => {
     if (result) {
       const codigo = result[0]?.rawValue;
@@ -157,7 +170,7 @@ function App() {
     }
   };
 
-  // --- 3. FOTO ---
+  // --- FOTO ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -207,7 +220,14 @@ function App() {
       setCodigosUsados([...codigosUsados, form.codigoBarras]);
       setFotosUsadas([...fotosUsadas, form.fotoNombre]);
 
-      setMensaje({ texto: '¡Reciclaje verificado!', tipo: 'success' });
+      // 3. ACTIVAR CONFETI Y MENSAJE
+      setMensaje({ texto: '¡FELICIDADES! Has ganado Eco-Puntos 🎉', tipo: 'success' });
+      setShowConfetti(true);
+
+      // Apagar confeti a los 5 segundos
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000);
       
       setForm({ materialId: '', peso: '', marca: '', codigoBarras: '', fotoNombre: '' });
       setBasureroValidado(false);
@@ -236,10 +256,12 @@ function App() {
 
   return (
     <div className="container">
+      {/* 4. COMPONENTE DE CONFETI (Solo se muestra si showConfetti es true) */}
+      {showConfetti && <Confetti width={windowDimension.width} height={windowDimension.height} />}
+
       <div className="header">
         <div>
           <h2>Hola, {user.nombre}</h2>
-          {/* CORRECCIÓN: Usamos el icono User aquí */}
           <span className="user-badge"><User size={14}/> Estudiante</span>
         </div>
         <div className="points-display">{user.puntos_actuales} <small>pts</small></div>
@@ -254,7 +276,6 @@ function App() {
 
       {!basureroValidado ? (
         <div className="card" style={{textAlign: 'center'}}>
-          {/* CORRECCIÓN: Usamos el icono QrCode aquí */}
           <h3><QrCode size={24} style={{verticalAlign: 'middle'}}/> 1. Validar Ubicación</h3>
           <p style={{color: '#64748b'}}>Escanea el QR del basurero para empezar.</p>
           
@@ -305,7 +326,6 @@ function App() {
                </div>
             )}
 
-            {/* CORRECCIÓN: Agregamos icono de Camera al label */}
             <label className="label" style={{display: 'flex', alignItems: 'center', gap: 5}}>
               <Camera size={16}/> Foto de Evidencia:
             </label>
